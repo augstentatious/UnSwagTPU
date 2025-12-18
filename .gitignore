@@ -205,3 +205,34 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# --- SOPHIA PALLAS SPECIFIC ---
+
+# Model Weights (Do not commit these!)
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.bin
+*.gguf
+models/
+weights/
+checkpoints/
+
+# JAX / TPU Caches
+.jax_cache/
+compiler_cache/
+
+# Colab & Jupyter Junk
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+*.ipynb  # Optional: Uncomment if you want to keep notebooks out of the main repo
+
+# HuggingFace
+.cache/
+token_files/
+
+# Logs
+*.log
+runs/
+wandb/
