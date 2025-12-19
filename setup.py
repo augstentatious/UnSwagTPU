@@ -1,17 +1,24 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="sophia_pallas",
+    name="unswag",
     version="0.1.0",
-    description="Structural Isomorphism & PEFT Library for JAX/TPU",
-    author="John Augustine Young", # The Principal Investigator
+    description="High-integrity, memory-efficient JAX kernels for Gemma-9B fine-tuning.",
+    author="John Augustine Young",
+    author_email="incognito@thecleanroom.ai", # ;)
     packages=find_packages(),
     install_requires=[
-        "jax",
-        "jaxlib",
+        "jax[tpu]",
         "flax",
-        "optax",
-        "transformers"
+        "numpy",
+        "requests", # Needed for Kaggle TPU handshake
     ],
+    classifiers=[
+        "Development Status :: 3 - Alpha",
+        "Intended Audience :: Science/Research",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
+        "License :: OSI Approved :: Apache Software License",
+        "Programming Language :: Python :: 3.10",
+    ],
+    python_requires=">=3.10",
 )
-
