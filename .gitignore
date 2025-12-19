@@ -236,3 +236,9 @@ token_files/
 *.log
 runs/
 wandb/
+
+# UnSwag Benchmarking Data
+*.npy
+*.npz
+activations_dump/
+benchmarks/results/
