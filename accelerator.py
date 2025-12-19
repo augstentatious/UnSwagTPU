@@ -1,8 +1,38 @@
-refactor: Rename to UnSwag; enforce 1-bit structural constraints
+import os
+import sys
+import jax
+import logging
 
-Formalizes the transition from 'Sophia-Pallas' to 'UnSwag'. This rebrand aligns the repository with the core 'Sophia Protocol' hypothesis: that rigorous engineering constraints (specifically, 1-bit activation packing on TPUs) are isomorphic to robust alignment constraints.
+def initialize_tpu():
+    """
+    Modern Handshake for JAX on Colab/Kaggle.
+    Automatically handles TPU detection without legacy setup calls.
+    """
+    try:
+        # 1. KAGGLE: Still needs a manual nudge to see the TPU
+        if 'KAGGLE_KERNEL_RUN_TYPE' in os.environ:
+            print("⚡ UnSwag: Configuring for Kaggle TPU...")
+            jax.config.update("jax_platforms", "tpu")
 
-Changes include:
-- Renamed package root to `unswag/` to enforce the "no-bloat" philosophy—liquidating the "toxic asset" of 16-bit activation debt.
-- Updated README with technical specifications for the Pallas SRAM-to-Register bitmask kernel.
-- Added 'Proof of Convergence' logs demonstrating successful gradient flow under extreme quantization constraints.
+        # 2. COLAB: Auto-detects in JAX 0.4.x+ (No setup_tpu() needed)
+        elif 'COLAB_RELEASE_TAG' in os.environ:
+            print("⚡ UnSwag: Colab Environment Detected.")
+        
+        # 3. VERIFY HARDWARE
+        # This is the moment of truth
+        devices = jax.devices()
+        dev_type = devices[0].device_kind.upper()
+        
+        print(f"✅ Hardware: {len(devices)} devices found.")
+        print(f"   -> Type: {dev_type}")
+        
+        if "TPU" not in dev_type:
+            logging.warning("⚠️ CRITICAL: TPU not found! Running on CPU/GPU.")
+            
+    except Exception as e:
+        print(f"❌ Handshake Error: {e}")
+        # Don't crash, just warn, so the user can debug
+        print("   -> Tip: Ensure your Runtime is set to TPU v2-8 (Colab) or TPU VM v3-8 (Kaggle).")
+
+if __name__ == "__main__":
+    initialize_tpu()
