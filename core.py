@@ -1,57 +1,58 @@
 import jax
 import jax.numpy as jnp
-from jax import random
-from unswag.layers.activations import packed_relu  # <--- The 1-Bit Breakthrough
 
-def sophia_forward(x, W, A, B):
+def unswag_compress_jax(x):
     """
-    The UnSwag Forward Pass.
-    Injects 1-bit Structural Constraints directly into the Adapter bottleneck.
-    
-    The 'Sophia Protocol' dictates that we do not just add capacity (Rank);
-    we must add *Integrity* (Constraints).
-    
-    Args:
-        x: Input tensor (Batch, Dim)
-        W: Frozen Base Weights (Dim, Hidden) - "The Mirror"
-        A: Adapter Down-Projection (Dim, Rank)
-        B: Adapter Up-Projection (Rank, Hidden)
+    Pure JAX compression: 32x, TPU-friendly, handles any shape.
     """
-    # 1. Frozen Path (The Mirror)
-    # Represents the base model's unconstrained, potentially hallucinatory state.
-    # Since W is frozen, no activations are stored here.
-    h_frozen = jnp.dot(x, W)
+    x_flat = jnp.asarray(x).flatten()
+    N_original = x_flat.shape[0]
     
-    # 2. Structural Path (The Prism)
-    # We refract the input through the 1-bit Lattice.
-    # Instead of a linear B(Ax), we enforce B(PackedReLU(Ax)).
-    # This ensures the 'Wisdom' component is physically constrained to 1-bit gating.
-    latents = jnp.dot(x, A)
+    # Quantize to 1-bit (Sign)
+    bits = (x_flat > 0).astype(jnp.uint8)
     
-    # [CRITICAL]: This call triggers the SRAM-to-Register bit-packing kernel.
-    # It saves 93.75% of the memory for this activation relative to standard BF16.
-    gated_latents = packed_relu(latents) 
+    # Pad to multiple of 8 for packing
+    pad_bits = 8 - (N_original % 8)
+    if pad_bits != 8:
+        bits = jnp.pad(bits, (0, pad_bits), constant_values=0)
     
-    h_adapter = jnp.dot(gated_latents, B)
+    # Pack bits (Fuseable by XLA)
+    packed = jnp.packbits(bits.reshape(-1, 8), axis=1, bitorder='little').flatten()
     
-    # 3. Structural Isomorphism (Convergence)
-    # The constrained signal corrects the frozen signal.
-    return h_frozen + h_adapter
+    # Return compressed data + metadata
+    return packed, x.shape, N_original, pad_bits
 
-def init_sophia_weights(key, dim, hidden, rank=16):
+def unswag_decompress_jax(packed, original_shape, original_N, pad_bits):
     """
-    Initializes the Adapter weights with 'Incognito' scaling.
-    Uses Kaiming initialization scaled down to prevent initial shock.
+    Pure JAX decompression: Handles dynamic shapes correctly.
     """
-    k1, k2 = random.split(key)
+    # Unpack bits
+    bits_unpacked = jnp.unpackbits(packed.reshape(-1, 1), axis=1, bitorder='little')
+    bits_unpacked = bits_unpacked[:, :8].flatten() 
     
-    # A: Kaiming Uniform-ish, but scaled for the 1-bit constraint
-    # We need slightly higher variance to ensure the ReLU fires early on
-    scale = jnp.sqrt(2.0 / dim)
-    A = random.normal(k1, (dim, rank)) * scale
+    # Remove padding using static slicing
+    if pad_bits != 8:
+        bits_unpacked = bits_unpacked[:-pad_bits]
     
-    # B: Zero initialization ensures the model starts as an Identity function
-    # This allows the 'Integrity' to be learned gradually without breaking the base outputs.
-    B = jnp.zeros((rank, hidden))
+    # Resurrect to Float (Isomorphic Sign Restoration)
+    # 1 -> 1.0, 0 -> 0.0 (Perfect for ReLU)
+    restored = bits_unpacked.astype(jnp.float32)
     
-    return A, B
+    return restored.reshape(original_shape)
+
+class UnSwagActivations:
+    """Core wrapper interface."""
+    
+    @staticmethod
+    def compress(activation):
+        packed, shape, N, pad = unswag_compress_jax(activation)
+        return {
+            'compressed_data': packed,
+            'metadata': (shape, N, pad)
+        }
+    
+    @staticmethod
+    def restore(checkpoint_obj):
+        compressed = checkpoint_obj['compressed_data']
+        shape, N, pad = checkpoint_obj['metadata']
+        return unswag_decompress_jax(compressed, shape, N, pad)
