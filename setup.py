@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 setup(
     name="unswag",
     version="0.1.0",
-    description="High-integrity, memory-efficient JAX kernels for Gemma-9B fine-tuning.",
+    description="32x Activation Compression for TPU Training via Structural Isomorphism.",
     author="John Augustine Young",
     author_email="cleanroomresearch@gmail.com", # ;)
     packages=find_packages(),
@@ -14,7 +14,7 @@ setup(
         "requests", # Needed for Kaggle TPU handshake
     ],
     classifiers=[
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 4 - Beta",
         "Intended Audience :: Science/Research",
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
         "License :: OSI Approved :: Apache Software License",
