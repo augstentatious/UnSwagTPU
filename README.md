@@ -1,28 +1,6 @@
 # UnSwag
 
-**The Memory Wall is a choice.**
-
-UnSwag is a JAX library that implements **Structural Isomorphism** for activation caching. By compressing forward-pass activations into 1-bit packets, we achieve **32x memory reduction** with mathematically identical convergence.
-
-
-## The Stats (TPU v3-8)
-- **Compression:** 32.0x (393KB -> 12KB)
-- **Accuracy Delta:** 0.000000
-- **Speedup:** ~5% (Due to reduced HBM bandwidth pressure)
-
-## Usage
-
-```python
-import jax
-from unswag import unswag_relu
-
-# Replace standard ReLU
-# x = jax.nn.relu(x)  <-- Old, bloated
-x = unswag_relu(x)    # <-- New, 3% memory footprint
-
-# UnSwag
-
-```text
+```
     _    _       _______
    | |  | |     / ______|
    | |  | |_ __| (___ __      ____ _  __ _
@@ -36,32 +14,32 @@ x = unswag_relu(x)    # <-- New, 3% memory footprint
     `---------------------------'  |
        `---------------------------'
 
-   [!] STATUS: EXPERIMENTAL // BETA
-   [!] ARCH: JAX / FLAX 
-   [!] TARGET: TPU v2-8 to TPU v5e
+   [!] STATUS: EXPERIMENTAL // ALPHA v0.1.0
+   [!] ARCH: DUAL-STACK / (JAX/TPU & TORCH/GPU) 
+   [!] TARGET: COMMODITY SILICON
 ```
+"The Memory Wall is a choice." — *Sophia Labs*
 
-# 🦁 UnSwag: 1-Bit Structural Isomorphism for JAX/TPU
+UnSwag is a memory-efficient training primitive forged in The Clean Room. It maps ReLU activations to 1-bit structural isomorphisms, effectively removing the memory bottleneck for large-context training.
 
+By compressing forward-pass activations into 1-bit packets, we achieve 32x memory reduction with mathematically identical convergence.
 
+## 🦁 The Protocol
+**1-Bit Isomorphism**: Compresses activation memory by 32x (vs FP32) with mathematical equivalence.
 
-UnSwag is a high-efficiency training primitive for the JAX/TPU ecosystem. By mapping ReLU activations to 1-bit structural isomorphisms, UnSwag reduces activation memory by **32x** with **0.000000** loss difference.
+**Dual-Stack Architecture**:
 
+**TPU (JAX)**: Built for massive context windows (128k+) on Google TPUs.
 
+**GPU (Triton)**: Custom OpenAI Triton kernels for NVIDIA T4/A100/H100 hardware.
 
-Designed for XLA, UnSwag enables massive context windows on commodity TPU hardware (Colab/Kaggle) by eliminating the memory wall.
-
-
+**Hardware Agnostic**: Automatically detects silicon and loads the correct firmware.
 
 ---
 
 ## 📊 Verified Benchmarks (Gemma-2-9B Scale)
 
-
-
 *Tested on TPU v3-8 (16GB VRAM per core)*
-
-
 
 | Metric | Standard ReLU | UnSwag (1-Bit) |
 
@@ -75,49 +53,48 @@ Designed for XLA, UnSwag enables massive context windows on commodity TPU hardwa
 
 | **Compression Ratio** | 1x | **32x** |
 
-
+## 📦 Installation
+pip install unswag
 ---
 
+## 🚀 Usage
+UnSwag automatically detects your accelerator (TPU or GPU) and creates the isomorphism.
 
+**Option A: PyTorch (NVIDIA GPU)**
+*Powered by custom Triton Kernels.*
+```
+from transformers import AutoModelForCausalLM
+from unswag import unswag_model
 
-## 🚀 Quick Start
+# 1. Load Standard Model
+model = AutoModelForCausalLM.from_pretrained("google/gemma-2-9b")
 
+# 2. Inject the Protocol
+ Surgically replaces linear layers with 1-bit isomorphic layers
+model = unswag_model(model)
 
-
-```python
-
-from unswag import unswag_relu
-
-import jax
-
-
-
-@jax.jit
-
-def train_step(w, x):
-
-    # Activation memory is reduced by 32x automatically
-
-    # Verified stable at 128k context on 9B parameters
-
-    gate = jax.numpy.dot(x, w)
-
-    return unswag_relu(gate)
-
-
-
+# 3. Train
+# Activation memory is now 96.8% empty.
 ```
 
+**Option B: JAX / Flax (Google TPU)**
+*Powered by Pallas/XLA.*
+```
+import jax
+from unswag import unswag_relu
 
-
+@jax.jit
+def train_step(w, x):
+    # Standard linear pass
+    gate = jax.numpy.dot(x, w)
+    
+    # 1-Bit Activation Caching
+    # Automatically packs bits for backward pass
+    return unswag_relu(gate)
+```
 ---
 
-
-
 ## 🧱 The 256k Integer Wall
-
-
-
 During testing on a TPU v3-8, UnSwag successfully bypassed the memory wall, eventually hitting the **XLA Hardware Addressing Limit**:
 
 * **131,072 Context**: Stable ✅
@@ -126,24 +103,16 @@ During testing on a TPU v3-8, UnSwag successfully bypassed the memory wall, even
 
 🛡️ Mathematical Proof: 1-Bit VJP Isomorphism
 
-The "Memory Wall" exists because standard backpropagation requires storing the full activation $h$ of every layer to compute the gradient with respect to the weights. For a ReLU layer, the forward pass is:
+The "Memory Wall" exists because standard backpropagation requires storing the full activation $h$ of every layer to compute the gradient. For a ReLU layer, the forward pass is:
 
 $$y = \text{ReLU}(W \cdot x + b)$$
 
-During the backward pass (Vector-Jacobian Product), we calculate the gradient $\nabla x$:
-
-$$\frac{\partial \mathcal{L}}{\partial x} = \left( \frac{\partial y}{\partial x} \right)^T \cdot \nabla y$$
-
-The Isomorphism
 The derivative of $\text{ReLU}(z)$ is the Heaviside Step Function $H(z)$:
 
 $$\frac{d}{dz}\text{ReLU}(z) = H(z) = \begin{cases} 1 & z > 0 \\ 0 & z \le 0 \end{cases}$$
 
 Crucially, $H(z)$ is binary. It does not depend on the magnitude of $z$, only its sign.
 
-UnSwag exploits this by storing only the sign bits ($\text{sgn}(z)$) in a bit-packed uint32 array. This reduces the storage for the backward pass from 32 bits per element to 1 bit per element, a 32x reduction.Because $H(z) \equiv (\text{sgn}(z) > 0)$, the reconstructed gradient is bit-identical to the standard gradient (Max Difference: $0.000000$).
+UnSwag exploits this by storing only the sign bits ($\text{sgn}(z)$) in a bit-packed uint32 array. This reduces the storage for the backward pass from 32 bits per element to **1 bit per element**, a 32x reduction. Because $H(z) \equiv (\text{sgn}(z) > 0)$, the reconstructed gradient is bit-identical to the standard gradient.
 
-🦁 Why this matters for the 9B Model
-While standard training requires parking ~7.3GB of float32 activations per layer for 128k context, UnSwag only parks ~229MB. This reclaimed HBM is what allows us to scale to massive context windows on "underpowered" 16GB TPU hardware.
-
-⚠️ Note on Data: The "Sophia Dynamic Data" used in the original benchmarks is proprietary research material. Users should provide their own .jsonl datasets (instruction/input/output format) to utilize the prepare_data pipeline.
+**Maintained by Sophia Labs.** *Forged in The Clean Room.*
