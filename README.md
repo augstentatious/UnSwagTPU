@@ -113,6 +113,6 @@ $$\frac{d}{dz}\text{ReLU}(z) = H(z) = \begin{cases} 1 & z > 0 \\ 0 & z \le 0 \en
 
 Crucially, $H(z)$ is binary. It does not depend on the magnitude of $z$, only its sign.
 
-UnSwag exploits this by storing only the sign bits ($\text{sgn}(z)$) in a bit-packed uint32 array. This reduces the storage for the backward pass from 32 bits per element to **1 bit per element**, a 32x reduction. Because $H(z) \equiv (\text{sgn}(z) > 0)$, the reconstructed gradient is bit-identical to the standard gradient.
+UnSwag exploits this by storing only the sign bits ( $\text{sgn}(z)$ ) in a bit-packed uint32 array. This reduces the storage for the backward pass from 32 bits per element to **1 bit per element**, a 32x reduction. Because $H(z) \equiv (\text{sgn}(z) > 0)$, the reconstructed gradient is bit-identical to the standard gradient.
 
 **Maintained by Sophia Labs.** *Forged in The Clean Room.*
