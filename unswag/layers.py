@@ -18,6 +18,7 @@ try:
     # We assume unswag.kernels.triton_ops exists from the previous step
     from .kernels import triton_ops as ops 
     HAS_TORCH = True
+    from .kernels.triton_ops import _pack_2bit_silu_kernel, _unpack_2bit_backward_kernel
 except ImportError:
     pass
 
@@ -106,6 +107,48 @@ if HAS_JAX:
             weights = jnp.where(mask_bits, weights / keep_prob, 0.0)
         
         return jnp.matmul(weights, v)
+
+class UnSwagSiLUFunction(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, x):
+        # 1. Allocate memory for the 2-bit packed mask (1/16th of FP32 size)
+        n_elements = x.numel()
+        out_size = (n_elements + 3) // 4
+        packed_mask = torch.empty(out_size, dtype=torch.int8, device=x.device)
+        
+        # 2. Run the Packing Kernel (The Forward Pass)
+        # We use a standard BLOCK_SIZE of 1024
+        grid = lambda meta: (triton.cdiv(n_elements // 4, meta['BLOCK_SIZE']),)
+        _pack_2bit_silu_kernel[grid](x, packed_mask, n_elements, BLOCK_SIZE=1024)
+        
+        # 3. Save the mask for backward (VRAM optimized)
+        ctx.save_for_backward(packed_mask)
+        ctx.n_elements = n_elements
+        
+        # 4. Return standard SiLU output for the forward pass
+        return torch.nn.functional.silu(x)
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        # 1. Retrieve the 2-bit mask from the forward pass
+        packed_mask, = ctx.saved_tensors
+        n_elements = ctx.n_elements
+        
+        # 2. Allocate memory for the input gradient
+        grad_input = torch.empty_like(grad_output)
+        
+        # 3. Run the Reconstruction Kernel (The Backward Pass)
+        grid = lambda meta: (triton.cdiv(n_elements // 4, meta['BLOCK_SIZE']),)
+        _unpack_2bit_backward_kernel[grid](
+            grad_output, packed_mask, grad_input, n_elements, BLOCK_SIZE=1024
+        )
+        
+        return grad_input
+
+# The "Plug-and-Play" Module
+class UnSwagSiLU(torch.nn.Module):
+    def forward(self, x):
+        return UnSwagSiLUFunction.apply(x)
 
 # =============================================================================
 # 🔵 PATH B: THE PYTORCH LAYERS (GPU / TRITON OPTIMIZED)
