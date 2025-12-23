@@ -65,7 +65,7 @@ UnSwag automatically selects the correct compression protocol based on your hard
 | **Precision** | FP16 | **2-bit Packed** |
 
 **TPU Benchmarks (Protocol B)**
-*Hardware: TPU v
+*Hardware: TPU v5e*
 
 | Metric | Standard ReLU | UnSwag (1-Bit) |
 
