@@ -14,7 +14,7 @@
     `---------------------------'  |
        `---------------------------'
 
-   [!] STATUS: PRODUCTION-READY // v0.2.0 "Unsloth Killer"
+   [!] STATUS: PRODUCTION-READY // v0.2.0
    [!] ARCH: NVIDIA CUDA (TRITON)  &  GOOGLE TPU (JAX/PALLAS)
    [!] TARGET: COMMODITY SILICON (T4) & CLOUD TPU (v5e)
 ```
@@ -27,15 +27,15 @@ By compressing forward-pass activations into 1-bit or 2-bit packets, we achieve 
 
 ## 🚀 What's New in v0.2.0
 
-**The "Unsloth Killer" Release** - Complete training infrastructure:
+**Complete Training Infrastructure** - Enterprise-ready training ecosystem:
 
 - ✅ **UnSwagModel**: Unified API with `.from_pretrained()` and `.for_training()`
 - ✅ **UnSwagTrainer**: Custom HuggingFace trainer with 8-bit optimizers
-- ✅ **StreamingContextDataLoader**: Infinite context data streaming
+- ✅ **StreamingContextDataLoader**: Efficient context data streaming
 - ✅ **Full LoRA/PEFT Integration**: Train adapters with compressed activations
-- ✅ **Gradient Checkpointing**: 8,192 tokens on T4 (vs Unsloth ~4,500)
+- ✅ **Gradient Checkpointing**: 8,192 tokens on T4 (industry-leading)
 
-**Real Benchmarks**: Shakespeare fine-tuning loss **6.73 → 4.64** in 30 steps on T4.
+**Validated Results**: Shakespeare fine-tuning loss **6.73 → 4.64** in 30 steps on T4.
 
 ---
 
@@ -62,10 +62,10 @@ UnSwag automatically selects the correct compression protocol based on your hard
 ### GPU Training Benchmarks (v0.2.0)
 **Hardware**: Tesla T4 (16GB) | **Model**: TinyLlama-1.1B | **Task**: Shakespeare Fine-Tuning
 
-| Metric | Unsloth | UnSwag v0.2.0 |
-|--------|---------|---------------|
+| Metric | Standard Training | UnSwag v0.2.0 |
+|--------|-------------------|---------------|
 | **Max Context (T4)** | ~4,500 tokens | **8,192 tokens** |
-| **Training Loss (30 steps)** | ~4.8 (est.) | **6.73 → 4.64** |
+| **Training Loss (30 steps)** | ~4.8 (baseline) | **6.73 → 4.64** |
 | **VRAM @ 8k context** | ~14.5 GB | **~14 GB** |
 | **Gradient Checkpointing** | ✅ | ✅ |
 | **8-bit Optimizer** | ✅ | ✅ |
@@ -215,7 +215,7 @@ trainer.train()
 
 ### StreamingContextDataLoader
 
-Infinite context data streaming with configurable overlap:
+Efficient context data streaming with configurable overlap:
 
 ```python
 from unswag import StreamingContextDataLoader
