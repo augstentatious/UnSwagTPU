@@ -2,26 +2,38 @@ from setuptools import setup, find_packages
 
 setup(
     name="unswag",
-    version="0.1.0",
-    description="1-Bit Structural Isomorphism for TPU (JAX) & GPU (Triton)",
+    version="0.3.0",
+    author="John Augustine Young",
+    description="UnSwag v0.3: Packet-Switched Attention & 1-Bit Structural Isomorphism",
     long_description="""
-    UnSwag is a memory-efficient training primitive for the JAX/TPU and PyTorch/GPU ecosystems.
+    # UnSwag v0.3: The Evolution of Attention
+
+    UnSwag is a high-performance library designed to break the memory wall and compute ceiling. 
+    Version 0.3.0 introduces **Protocol C**, moving beyond simple memory optimization into 
+    intelligent, hardware-native semantic routing.
+
+    ## Version 0.3.0 Highlights (Protocol C):
+    - **Hardware-Native Semantic Routing:** 2-bit packet switching (00, 01, 10, 11) for differential token processing.
+    - **Causal Hybrid Path:** Integrated Depthwise-Separable CNNs for syntactic speedups (25x theoretical) 
+      alongside Sparse Global Attention.
+    - **Adaptive Summary Register:** Recursive O(1) memory register for abstract sequence gist.
     
-    By mapping ReLU activations to 1-bit structural isomorphisms, UnSwag reduces activation memory by 32x 
-    with 0.000000 loss difference.
-    
-    - **TPU Mode:** Uses JAX/Pallas for massive context windows on Google TPUs.
-    - **GPU Mode:** Uses Custom OpenAI Triton kernels for commodity hardware.
-    
-    The Memory Wall is now optional.
+    ## Legacy Foundations (v0.1 - v0.2):
+    - **1-Bit Structural Isomorphism:** 32x activation memory reduction via ReLU mapping.
+    - **TPU/GPU Native:** Support for JAX/Pallas (TPU) and OpenAI Triton (GPU).
     """,
     long_description_content_type="text/markdown",
-    author="Sophia Labs",
-    packages=find_packages(), 
+    url="https://github.com/augstentatious/unswagai",
+    packages=find_packages(),
     install_requires=[
-        "jax",       # Core for TPU path
+        "torch>=2.0.0",
+        "jax",
         "jaxlib",
-        "torch",     # Core for GPU path
+        "triton",
+        "numpy",
+        "einops",
+        "librosa",
+        "torchaudio",
         "transformers"
     ],
     classifiers=[
